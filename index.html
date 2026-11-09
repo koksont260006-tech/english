@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>영어 단어 도전!</title>
+<meta name="theme-color" content="#4f6df5">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f7ff;--card:#fff;--tx:#1d2540;--sub:#6b7391;--pri:#4f6df5;--ok:#1fa56b;--no:#e0475b;--line:#dde3f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14172a;--card:#1f2340;--tx:#eef0ff;--sub:#a0a8cc;--pri:#7d93ff;--ok:#43d391;--no:#ff7388;--line:#33385e}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:24px;text-align:center;margin:8px 0 4px}
+.sub{text-align:center;color:var(--sub);font-size:14px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:13px 18px;background:var(--pri);color:#fff;font-weight:700;font-size:16px}
+button.ghost{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.stage{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stage h2{margin:0;font-size:18px}.stage p{margin:4px 0 0;color:var(--sub);font-size:13px}
+.badge{font-size:13px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--line)}
+.badge.ok{background:var(--ok);color:#fff}
+.bar{height:8px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0 16px}
+.bar i{display:block;height:100%;background:var(--pri);transition:width .3s}
+.top{display:flex;justify-content:space-between;color:var(--sub);font-size:14px}
+.meaning{font-size:30px;font-weight:800;text-align:center;margin:10px 0 6px}
+.hint{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:14px 0}
+.hint span{min-width:30px;height:40px;line-height:38px;text-align:center;border-bottom:3px solid var(--pri);font-size:24px;font-weight:700;text-transform:uppercase}
+.hint.tiles span{border:1.5px solid var(--line);border-radius:8px;background:var(--bg);min-width:36px}
+.hl{text-align:center;font-size:13px;color:var(--sub)}
+input{width:100%;font:inherit;font-size:22px;text-align:center;padding:12px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--tx);margin:8px 0 12px}
+input:focus{outline:none;border-color:var(--pri)}
+.row{display:flex;gap:8px}.row button{flex:1}
+.fb{text-align:center;font-weight:700;font-size:18px;min-height:28px;margin:6px 0}
+.fb.ok{color:var(--ok)}.fb.no{color:var(--no)}
+.big{font-size:56px;text-align:center}
+.score{font-size:40px;font-weight:800;text-align:center;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const DATA=[
+[["apple","사과"],["book","책"],["school","학교"],["friend","친구"],["water","물"],["happy","행복한"],["family","가족"],["orange","오렌지"],["teacher","선생님"],["music","음악"]],
+[["library","도서관"],["weather","날씨"],["breakfast","아침 식사"],["holiday","휴일"],["kitchen","부엌"],["mountain","산"],["vegetable","채소"],["birthday","생일"],["hospital","병원"],["homework","숙제"]],
+[["beautiful","아름다운"],["important","중요한"],["difficult","어려운"],["environment","환경"],["experience","경험"],["dangerous","위험한"],["language","언어"],["adventure","모험"],["comfortable","편안한"],["knowledge","지식"]]
+];
+const HINTDESC=["섞인 알파벳을 보고 단어를 맞혀 보세요","첫 글자와 글자 수를 알려 드려요","첫 글자와 마지막 글자만 알려 드려요"];
+const NAMES=["1단계 · 기초","2단계 · 생활","3단계 · 도전"];
+const app=document.getElementById("app");
+let passed=[false,false,false],best=[0,0,0];
+let S=null,NAME="";
+// 구글 Apps Script 웹앱 주소를 아래 따옴표 안에 붙여 넣으세요
+const API="https://script.google.com/macros/s/AKfycbyDUIsh-mIwVvzA4ofGdDIyt-DuJJEHX1Y5mdShJ_VIornMFfqqWRCboLGcXtjyRCJLkg/exec";
+try{const x=JSON.parse(localStorage.getItem("eq")||"{}");if(x.passed)passed=x.passed;if(x.best)best=x.best;if(x.name)NAME=x.name}catch(e){}
+function save(){
+  try{localStorage.setItem("eq",JSON.stringify({name:NAME,passed,best}))}catch(e){}
+  if(!API.startsWith("http")||!NAME)return;
+  try{fetch(API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({name:NAME,passed,best,stage:passed.filter(Boolean).length,updated:Date.now()})}).catch(()=>{})}catch(e){}
+}
+function wire(){
+  const nm=document.getElementById("nm");
+  if(nm){nm.value=NAME;nm.oninput=()=>{NAME=nm.value.trim()};nm.onchange=save;}
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function speak(w){
+  try{
+    if(!window.speechSynthesis)return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(w);u.lang="en-US";u.rate=.85;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function home(){
+  let h='<h1>🌟 영어 단어 도전!</h1><div class="sub">뜻을 보고 영어 단어를 써 보세요 · 10문제 중 7개 이상 맞히면 통과</div>';
+  h+=`<div class="card"><div class="hl">내 이름</div><input id="nm" type="text" maxlength="20" placeholder="이름을 입력하세요" style="margin-bottom:0"></div>`;
+  for(let i=0;i<3;i++){
+    const locked=i>0&&!passed[i-1];
+    h+=`<div class="card stage"><div><h2>${NAMES[i]}</h2><p>${locked?"🔒 이전 단계를 통과하면 열려요":HINTDESC[i]}</p></div>
+    <div style="text-align:right">${passed[i]?'<span class="badge ok">통과 ✓</span>':best[i]?`<span class="badge">최고 ${best[i]}/10</span>`:""}<div style="margin-top:8px"><button ${locked?"disabled":""} onclick="start(${i})">${passed[i]?"다시":"시작"}</button></div></div></div>`;
+  }
+  if(passed[2])h+='<div class="card"><div class="big">🏆</div><div class="fb ok">모든 단계를 통과했어요! 대단해요!</div></div>';
+  app.innerHTML=h;wire();
+}
+
+function start(l){
+  if(!NAME){alert("먼저 이름을 입력해 주세요!");const n=document.getElementById("nm");if(n)n.focus();return}
+  save();
+  S={l,q:shuffle(DATA[l]),i:0,score:0,answered:false};
+  show();
+}
+
+function hintHTML(w,l){
+  if(l===0){
+    return `<div class="hint tiles">${shuffle(w.split("")).map(c=>`<span>${c}</span>`).join("")}</div><div class="hl">${w.length}글자 · 알파벳을 섞어 놓았어요</div>`;
+  }
+  let c=w.split("").map((ch,k)=>{
+    if(k===0)return ch;
+    if(l===2&&k===w.length-1)return ch;
+    return "_";
+  });
+  return `<div class="hint">${c.map(x=>`<span>${x}</span>`).join("")}</div><div class="hl">${w.length}글자</div>`;
+}
+
+function show(){
+  const [w,m]=S.q[S.i];
+  app.innerHTML=`<div class="top"><span>${NAMES[S.l]}</span><span>${S.i+1} / 10 · 정답 ${S.score}</span></div>
+  <div class="bar"><i style="width:${S.i*10}%"></i></div>
+  <div class="card"><div class="hl">이 뜻의 영어 단어는?</div><div class="meaning">${m}</div>
+  ${hintHTML(w,S.l)}
+  <input id="ans" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="영어로 입력">
+  <div class="fb" id="fb"></div>
+  <div class="row" id="btns"><button id="chk" onclick="check()">확인</button></div></div>`;
+  const a=document.getElementById("ans");
+  a.focus();
+  a.addEventListener("keydown",e=>{if(e.key==="Enter"){S.answered?next():check()}});
+  S.answered=false;
+}
+
+function check(){
+  if(S.answered)return;
+  const a=document.getElementById("ans");
+  const v=a.value.trim().toLowerCase();
+  if(!v){a.focus();return}
+  const [w]=S.q[S.i];
+  const ok=v===w;
+  S.answered=true;a.disabled=true;
+  const fb=document.getElementById("fb");
+  if(ok){S.score++;fb.className="fb ok";fb.textContent="🎉 정답! "+w;speak(w)}
+  else{fb.className="fb no";fb.textContent="❌ 정답은 "+w}
+  const last=S.i===9;
+  document.getElementById("btns").innerHTML=
+    (ok?`<button class="ghost" onclick="speak('${w}')">🔊 발음 듣기</button>`:"")+
+    `<button onclick="next()">${last?"결과 보기":"다음"}</button>`;
+}
+
+function next(){
+  if(S.i===9){result();return}
+  S.i++;show();
+}
+
+function result(){
+  const ok=S.score>=7,l=S.l;
+  if(S.score>best[l])best[l]=S.score;
+  if(ok)passed[l]=true;
+  save();
+  app.innerHTML=`<div class="card"><div class="big">${ok?"🎊":"💪"}</div>
+  <div class="score">${S.score} / 10</div>
+  <div class="fb ${ok?"ok":"no"}">${ok?"통과했어요! 잘했어요!":"아쉬워요, 7개 이상 맞히면 통과예요"}</div>
+  <div class="row" style="margin-top:14px">
+  <button class="ghost" onclick="start(${l})">다시 도전</button>
+  ${ok&&l<2?`<button onclick="start(${l+1})">다음 단계</button>`:`<button onclick="home()">처음으로</button>`}
+  </div></div>`;
+}
+
+home();
+</script>
+</body>
+</html>
